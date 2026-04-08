@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  getaway:
+    image: nginx:1.25-alpine
+    container_name: ip_getaway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
+    labels:
+      - "ip_getaway.version=1.0"
+    networks:
+      - ip_network
+
+networks:
+  ip_network:
+    driver: bridge
