@@ -15,6 +15,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular',
+    'apps',  # Registrar la app de usuarios
 ]
 
 MIDDLEWARE = [
@@ -93,7 +95,41 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Users Service API',
+    'DESCRIPTION': 'API documentation for users microservice',
+    'VERSION': '1.0.0',
+    'SERVERS': [
+        {
+            'url': '/user/api/v1',
+            'description': 'Gateway base URL',
+        }
+    ],
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.hooks.postprocess_schema_enums',
+        'core.schema.inject_gateway_servers',
+    ],
+    'SECURITY': [{'BearerAuth': []}],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'BearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'Agregar el token en el header Authorization: Bearer <token>',
+            }
+        }
+    },
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        'displayRequestDuration': True,
+    },
+}
+
+AUTH_USER_MODEL = 'apps.User'
