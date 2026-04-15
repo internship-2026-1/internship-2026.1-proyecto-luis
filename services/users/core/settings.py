@@ -99,6 +99,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
 
 SPECTACULAR_SETTINGS = {
@@ -133,3 +134,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 AUTH_USER_MODEL = 'apps.User'
+
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@example.com')
+PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '3600'))
+PASSWORD_RESET_CONFIRM_URL = os.environ.get(
+    'PASSWORD_RESET_CONFIRM_URL',
+    'http://localhost:8080/password-reset/confirm',
+)
