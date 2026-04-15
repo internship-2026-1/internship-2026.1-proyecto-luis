@@ -1,7 +1,6 @@
 version: "3.9"
 
 services:
-
   getaway:
     image: nginx:1.25-alpine
     container_name: ip_getaway
@@ -9,73 +8,11 @@ services:
       - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
-    depends_on:
-      - users
     labels:
-     - "ip_getaway.version=1.0"
+      - "ip_getaway.version=1.0"
     networks:
       - ip_network
-
-  users:
-    build:
-      context: ./services/users
-    container_name: ip_users
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./services/users:/app:Z
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
-    depends_on:
-      users_db:
-        condition: service_healthy
-    networks:
-      - ip_network
-
-  users_db:
-    image: postgres:15-alpine
-    container_name: users_db
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - users_db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - ip_network
-
-  pgadmin:
-    image: dpage/pgadmin4:8.5
-    container_name: ip_pgadmin
-    env_file:
-      - .env
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_LISTEN_PORT: 80
-    ports:
-      - "5050:80"
-    depends_on:
-      users_db:
-        condition: service_healthy
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - ip_network
-
 
 networks:
   ip_network:
     driver: bridge
-
-volumes:
-  users_db_data:
-  pgadmin_data:
