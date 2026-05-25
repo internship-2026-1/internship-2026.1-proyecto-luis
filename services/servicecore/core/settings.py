@@ -17,7 +17,10 @@ INSTALLED_APPS = [
     # 'corsheaders',  # Deshabilitado: CORS manejado por nginx
     'rest_framework',
     'drf_spectacular',
-    'apps',  # Registrar la app de usuarios
+    'api',  # Core API app
+    'catalog',
+    'transc',
+    'orders',
 ]
 
 MIDDLEWARE = [
@@ -50,26 +53,71 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
-DB_ENGINE = os.environ.get("USERS_DB_ENGINE", os.environ.get("DB_ENGINE", "sqlite")).lower()
+
+DB_ENGINE = os.environ.get("CORE_DB_ENGINE", "postgresql").lower()
+
+postgresql_config = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": os.environ.get("CORE_DB_NAME", "core_db"),
+    "USER": os.environ.get("CORE_DB_USER", "core_user"),
+    "PASSWORD": os.environ.get("CORE_DB_PASSWORD", "core_pass"),
+    "HOST": os.environ.get("CORE_DB_HOST", "core_db"),
+    "PORT": os.environ.get("CORE_DB_PORT", "5432"),
+}
 
 if DB_ENGINE == "postgresql":
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("USERS_DB_NAME", os.environ.get("POSTGRES_DB", "users_db")),
-            "USER": os.environ.get("USERS_DB_USER", os.environ.get("POSTGRES_USER", "users_user")),
-            "PASSWORD": os.environ.get("USERS_DB_PASSWORD", os.environ.get("POSTGRES_PASSWORD", "users_pass")),
-            "HOST": os.environ.get("USERS_DB_HOST", os.environ.get("POSTGRES_HOST", "users_db")),
-            "PORT": os.environ.get("USERS_DB_PORT", os.environ.get("POSTGRES_PORT", "5432")),
-        }
+        "default": postgresql_config,
+        "postgresql_db": postgresql_config.copy(),
+        "mongodb": {
+            "ENGINE": "django.db.backends.dummy",
+            "NAME": os.environ.get("MONGO_DB_NAME", "core_db"),
+        },
     }
 else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
-        }
+        },
+        "postgresql_db": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        },
+        "mongodb": {
+            "ENGINE": "django.db.backends.dummy",
+            "NAME": os.environ.get("MONGO_DB_NAME", "core_db"),
+        },
     }
+
+DATABASE_ROUTERS = ['core.db_routers.ServiceCoreRouter']
+
+MONGODB_SETTINGS = {
+    "HOST": os.environ.get("MONGO_HOST", "mongodb"),
+    "PORT": int(os.environ.get("MONGO_PORT", "27017")),
+    "USERNAME": os.environ.get("MONGO_ROOT_USERNAME", ""),
+    "PASSWORD": os.environ.get("MONGO_ROOT_PASSWORD", ""),
+    "NAME": os.environ.get("MONGO_DB_NAME", "core_db"),
+    "AUTH_SOURCE": os.environ.get("MONGO_AUTH_SOURCE", "admin"),
+    "PRODUCT_COLLECTION": os.environ.get("MONGO_PRODUCT_COLLECTION", "products"),
+    "CATALOG_COLLECTION": os.environ.get("MONGO_CATALOG_COLLECTION", "catalogs"),
+}
+
+INTERNAL_SYNC_TOKEN = os.environ.get("INTERNAL_SYNC_TOKEN", "")
+
+ODOO_URL = os.environ.get("ODOO_URL", "")
+ODOO_DB = os.environ.get("ODOO_DB", "")
+ODOO_USERNAME = os.environ.get("ODOO_USERNAME", "")
+ODOO_API_KEY = os.environ.get("ODOO_API_KEY", "")
+ODOO_PRODUCT_MODEL = os.environ.get("ODOO_PRODUCT_MODEL", "product.template")
+ODOO_SKU_FIELD = os.environ.get("ODOO_SKU_FIELD", "default_code")
+ODOO_PRICE_FIELD = os.environ.get("ODOO_PRICE_FIELD", "list_price")
+ODOO_STOCK_FIELD = os.environ.get("ODOO_STOCK_FIELD", "qty_available")
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 300
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -105,18 +153,17 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Users Service API',
-    'DESCRIPTION': 'API documentation for users microservice',
+    'TITLE': 'Core Service API',
+    'DESCRIPTION': 'API documentation for core microservice',
     'VERSION': '1.0.0',
     'SERVERS': [
         {
-            'url': '/user/api/v1',
+            'url': '/core/api/v1',
             'description': 'Gateway base URL',
         }
     ],
     'POSTPROCESSING_HOOKS': [
         'drf_spectacular.hooks.postprocess_schema_enums',
-        'core.schema.inject_gateway_servers',
     ],
     'SECURITY': [{'BearerAuth': []}],
     'COMPONENTS': {
@@ -125,7 +172,6 @@ SPECTACULAR_SETTINGS = {
                 'type': 'http',
                 'scheme': 'bearer',
                 'bearerFormat': 'JWT',
-                'description': 'Agregar el token en el header Authorization: Bearer <token>',
             }
         }
     },
@@ -134,16 +180,6 @@ SPECTACULAR_SETTINGS = {
         'displayRequestDuration': True,
     },
 }
-
-AUTH_USER_MODEL = 'apps.User'
-
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@example.com')
-PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '3600'))
-PASSWORD_RESET_CONFIRM_URL = os.environ.get(
-    'PASSWORD_RESET_CONFIRM_URL',
-    'http://localhost:8080/password-reset/confirm',
-)
 
 # ── CORS Configuration ────────────────────────────────────────────────
 # NOTA: CORS está manejado por nginx gateway, no por Django

@@ -98,6 +98,19 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = User.USERNAME_FIELD
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        
+        # Agregar campos personalizados al token
+        token['email'] = user.email
+        token['username'] = user.username or ''
+        token['first_name'] = user.first_name
+        token['last_name'] = user.last_name
+        token['role'] = user.role
+        
+        return token
+
     def validate(self, attrs):
         email = attrs.get('email')
         password = attrs.get('password')

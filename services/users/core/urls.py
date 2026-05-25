@@ -3,6 +3,8 @@ from django.urls import path
 from apps.views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
+    UserDetailView,
+    UserListView,
     UserLoginView,
     UserProfileUpdateView,
     UserRegisterView,
@@ -17,6 +19,8 @@ urlpatterns = [
     path('auth/password-reset/', PasswordResetRequestView.as_view(), name='auth-password-reset'),
     path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),
     path('profile/update/', UserProfileUpdateView.as_view(), name='profile-update'),
+    path('users/', UserListView.as_view(), name='user-list'),
+    path('users/<uuid:user_id>/', UserDetailView.as_view(), name='user-detail'),
     path('token/', UserLoginView.as_view(), name='token-obtain-pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

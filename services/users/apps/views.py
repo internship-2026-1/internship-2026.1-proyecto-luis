@@ -9,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
+    EmailTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     StandardResponseSerializer,
@@ -120,7 +121,10 @@ class UserLoginView(APIView):
         serializer = UserAuthLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        refresh = RefreshToken.for_user(user)
+        
+        # Usar el serializador personalizado para generar tokens con claims adicionales
+        refresh = EmailTokenObtainPairSerializer.get_token(user)
+        
         return success_response(
             'Login exitoso.',
             data={
@@ -279,5 +283,68 @@ class PasswordResetConfirmView(APIView):
         serializer.save()
         return success_response(
             'La contrasena ha sido actualizada exitosamente.',
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class UserListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Solo admins pueden listar usuarios
+        if request.user.role != User.Role.ADMIN:
+            return success_response(
+                'No tienes permisos para ver esta información.',
+                data=[],
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        
+        users = User.objects.all().order_by('-date_joined')
+        serializer = UserProfileSerializer(users, many=True)
+        return success_response(
+            'Usuarios obtenidos exitosamente.',
+            data=serializer.data,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class UserDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, user_id):
+        # Solo admins pueden actualizar otros usuarios
+        if request.user.role != User.Role.ADMIN:
+            return success_response(
+                'No tienes permisos para realizar esta acción.',
+                data={},
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return success_response(
+                'Usuario no encontrado.',
+                data={},
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        
+        # Permitir actualizar role
+        if 'role' in request.data:
+            if request.data['role'] not in [User.Role.ADMIN, User.Role.B2B, User.Role.B2C]:
+                return success_response(
+                    'Rol inválido.',
+                    data={},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            user.role = request.data['role']
+            user.is_staff = request.data['role'] == User.Role.ADMIN
+            user.save()
+        
+        return success_response(
+            'Usuario actualizado exitosamente.',
+            data=UserProfileSerializer(user).data,
             status_code=status.HTTP_200_OK,
         )
